@@ -1,0 +1,19 @@
+Language: Cpp
+BasedOnStyle: Google
+ColumnLimit: 85    # Forces line breaks for long lines
+BinPackArguments: false  # Each argument on its own line
+BinPackParameters: false
+IndentWidth: 4
+TabWidth: 4
+AlignAfterOpenBracket: Align
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackParameters: false
+ExperimentalAutoDetectBinPacking: false
+AlignOperands: true
+AllowShortFunctionsOnASingleLine: Empty
+BreakBeforeBraces: Allman
+
+
+
+
+
