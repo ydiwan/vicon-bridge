@@ -6,6 +6,7 @@
 
 #include <array>
 #include <iostream>
+#include <string>
 #include <rclcpp/rclcpp.hpp>
 
 #define MAX_BUF_SIZE 1024  // max Buffer size
@@ -22,6 +23,8 @@ struct Vicon_object
     /// @brief Vicon_object constructor set everything to zero.
     Vicon_object()
     {
+        name = "";
+        std::string name;
         x = 0.0;
         y = 0.0;
         z = 0.0;
@@ -41,8 +44,8 @@ class Vicon_reader
    public:
     Vicon_reader();
     ~Vicon_reader();
-    Vicon_object parse_data(std::byte *buffer);
-    Vicon_object read();
+    std::vector<Vicon_object> parse_data(std::byte *buffer);
+    std::vector<Vicon_object> read();
 };
 
 /// @brief Helper function for Vicon_reader::read(). Logs ROS2 ERROR UDP socket read
