@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <iostream>
 
+
 // libs for udp packets
 #include <arpa/inet.h>
 #include <errno.h>
@@ -13,9 +14,14 @@
 #include <strings.h>  //for bzero
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <vector>
+#include <cstring>
+#include <algorithm>
+#include <string>
 using namespace std;
 
 #define PORT 51001  // this should never change
+#define SHIFT 75    // size of each vicon block
 
 /// @brief Construction a udp listen socket to the vicon port number.
 /// It will update the need Vicon member variable need to facilitate reading Vicon
@@ -40,48 +46,66 @@ Vicon_reader::Vicon_reader()
 /// the UDP packet.
 /// @param buffer A std::byte buffer update by recvfrom() function
 /// @return Vicon_object containing the new data from the UDP packet.
-Vicon_object Vicon_reader::parse_data(std::byte *buffer)
+std::vector<Vicon_object> Vicon_reader::parse_data(std::byte *buffer)
 {
-    Vicon_object object;      // Vicon object
+    std::vector<Vicon_object> objects; // Vicon objects
     std::byte *ptr = buffer;  // copy pointer address
     ptr += 4;                 // skip the first 4 bytes of packet header
 
     int8_t numItems =
         *((int8_t *)ptr);  // number of objects in the data packet to be read
     ptr += 4;              // move 4 bytes over
+    
+    std::byte *data_start = buffer + 8;
 
-    ptr += 24;  // skip 24 bytes of string data
+    for(int i = 0; i < numItems; ++i){
+        Vicon_object object;
 
-    // x position
-    object.x = *((double *)ptr);
-    ptr += 8;  // move 8 bytes over
+        // Parse Name (24 bytes)    
+        std::byte *item_ptr = data_start + (i * SHIFT);
+            
+        char name_buf[25] = {0}; // 1 extra byte for terminator char 
+        std::memcpy(name_buf, item_ptr, 24);
+        std::string obj_name(name_buf);
 
-    // y position
-    object.y = *((double *)ptr);
-    ptr += 8;  // move 8 bytes over
+        // strip padding
+        obj_name.erase(std::find(obj_name.begin(), obj_name.end(), '\0'), obj_name.end());
+        object.name = obj_name;
+        item_ptr += 24;  // move forward to position data
 
-    // z position
-    object.z = *((double *)ptr);
-    ptr += 8;  // move 8 bytes over
+        // x position
+        object.x = *((double *)item_ptr);
+        item_ptr += 8;  // move 8 bytes over
 
-    // Roll
-    object.roll = (*((double *)ptr)) * (180.0 / M_PI);
-    ptr += 8;  // move 8 bytes over
+        // y position
+        object.y = *((double *)item_ptr);
+        item_ptr += 8;  // move 8 bytes over
 
-    // pitch
-    object.pitch = (*((double *)ptr)) * (180.0 / M_PI);
-    ptr += 8;  // move 8 bytes over
+        // z position
+        object.z = *((double *)item_ptr);
+        item_ptr += 8;  // move 8 bytes over
 
-    // yaw
-    object.yaw = (*((double *)ptr)) * (180.0 / M_PI);
-    ptr += 8;  // move 8 bytes over
+        // Roll
+        object.roll = (*((double *)item_ptr)) * (180.0 / M_PI);
+        item_ptr += 8;  // move 8 bytes over
 
-    return object;  // return new object
+        // pitch
+        object.pitch = (*((double *)item_ptr)) * (180.0 / M_PI);
+        item_ptr += 8;  // move 8 bytes over
+
+        // yaw
+        object.yaw = (*((double *)item_ptr)) * (180.0 / M_PI);
+        item_ptr += 8;  // move 8 bytes over
+
+        objects.push_back(object);
+    }
+   
+    return objects;  // return new object
 }
 
 /// @brief Grabs a UDP packet calls the parse buffer, returns the vicon_object data.
 /// @return Vicon_object contain the pose data.
-Vicon_object Vicon_reader::read()
+std::vector<Vicon_object> Vicon_reader::read()
 {
     std::byte buffer[MAX_BUF_SIZE];
 
